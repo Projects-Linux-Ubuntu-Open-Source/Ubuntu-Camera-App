@@ -14,6 +14,7 @@ import {
 import { useRecorderStore } from '../stores/recorderStore';
 import { RecordingCard } from '../components/recordings/RecordingCard';
 import { MediaViewerModal } from '../components/recordings/MediaViewerModal';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { RecordingItem, RecordingType } from '../types/recording';
@@ -28,6 +29,7 @@ export const Recordings: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedItem, setSelectedItem] = useState<RecordingItem | null>(null);
+  const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
 
   useEffect(() => {
     loadRecordings();
@@ -41,11 +43,9 @@ export const Recordings: React.FC = () => {
     return true;
   });
 
-  const handleClearAll = () => {
-    if (recordings.length === 0) return;
-    if (confirm('Are you sure you want to delete all recordings from local storage?')) {
-      clearAllRecordings();
-    }
+  const handleClearAllConfirm = () => {
+    clearAllRecordings();
+    setIsClearAllModalOpen(false);
   };
 
   const counts = {
@@ -73,7 +73,7 @@ export const Recordings: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleClearAll}
+            onClick={() => setIsClearAllModalOpen(true)}
             leftIcon={<Trash2 className="w-3.5 h-3.5 text-red-400" />}
             className="text-red-400 hover:text-red-300 hover:bg-red-950/40"
           >
@@ -168,6 +168,17 @@ export const Recordings: React.FC = () => {
         isOpen={Boolean(selectedItem)}
         onClose={() => setSelectedItem(null)}
         onDelete={(id) => deleteRecording(id)}
+      />
+
+      {/* Clear All Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isClearAllModalOpen}
+        title="Clear All Recordings"
+        message="Are you sure you want to delete all recordings from local storage? This action cannot be reversed."
+        confirmLabel="Clear All Permanently"
+        variant="danger"
+        onConfirm={handleClearAllConfirm}
+        onClose={() => setIsClearAllModalOpen(false)}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { RecordingItem, RecordingStatus, RecordingType } from '../types/recording';
 import { recordingStorage } from '../services/storage/recordingStorage';
+import { useAppStore } from './appStore';
 
 interface RecorderState {
   status: RecordingStatus;
@@ -49,23 +50,50 @@ export const useRecorderStore = create<RecorderState>((set, get) => ({
 
   deleteRecording: async (id: string) => {
     try {
+      const itemToDelete = get().recordings.find((r) => r.id === id);
+      if (itemToDelete?.previewUrl) {
+        URL.revokeObjectURL(itemToDelete.previewUrl);
+      }
       await recordingStorage.delete(id);
       await get().loadRecordings();
       if (get().selectedRecording?.id === id) {
         set({ selectedRecording: null });
       }
+      useAppStore.getState().addToast({
+        title: 'Recording Deleted',
+        message: itemToDelete?.name ? `"${itemToDelete.name}" was removed.` : 'Item was removed.',
+        type: 'info',
+      });
     } catch (err) {
       console.error('Failed to delete recording:', err);
+      useAppStore.getState().addToast({
+        title: 'Delete Failed',
+        message: 'Could not delete the recording from storage.',
+        type: 'error',
+      });
     }
   },
 
   clearAllRecordings: async () => {
     try {
+      get().recordings.forEach((r) => {
+        if (r.previewUrl) URL.revokeObjectURL(r.previewUrl);
+      });
       await recordingStorage.clearAll();
       await get().loadRecordings();
       set({ selectedRecording: null });
+      useAppStore.getState().addToast({
+        title: 'Library Cleared',
+        message: 'All recordings have been removed from local storage.',
+        type: 'info',
+      });
     } catch (err) {
       console.error('Failed to clear recordings:', err);
+      useAppStore.getState().addToast({
+        title: 'Clear Failed',
+        message: 'Could not clear recordings from storage.',
+        type: 'error',
+      });
     }
   },
 }));
