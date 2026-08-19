@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-[#0b0d10] text-neutral-100 antialiased selection:bg-[#e95420]/30 selection:text-orange-200 overflow-hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Ubuntu", "Segoe UI", Roboto, Oxygen, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  }
+
+  /* Custom Desktop Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0d1015;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #222936;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #333d4f;
+  }
+}

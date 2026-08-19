@@ -1,0 +1,11 @@
+{
+  "name": "Ubuntu Camera & Audio Recorder",
+  "description": "A modern desktop-style camera and audio recording application with live preview, VU metering, still capture, and recording library.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
