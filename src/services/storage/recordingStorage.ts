@@ -10,6 +10,7 @@ export interface RecordingStorage {
   getById(id: string): Promise<RecordingItem | null>;
   save(item: Omit<RecordingItem, 'id' | 'timestamp'> & { blob: Blob }): Promise<RecordingItem>;
   delete(id: string): Promise<void>;
+  deleteMultiple(ids: string[]): Promise<void>;
   clearAll(): Promise<void>;
   getStorageUsage(): Promise<StorageStats>;
 }
@@ -143,6 +144,22 @@ class IndexedDBRecordingStorage implements RecordingStorage {
 
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
+    });
+  }
+
+  async deleteMultiple(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    const db = await this.getDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+
+      ids.forEach((id) => {
+        store.delete(id);
+      });
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
     });
   }
 

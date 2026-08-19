@@ -19,6 +19,7 @@ interface RecorderState {
   setSelectedRecording: (item: RecordingItem | null) => void;
   loadRecordings: () => Promise<void>;
   deleteRecording: (id: string) => Promise<void>;
+  deleteMultipleRecordings: (ids: string[]) => Promise<void>;
   clearAllRecordings: () => Promise<void>;
 }
 
@@ -69,6 +70,35 @@ export const useRecorderStore = create<RecorderState>((set, get) => ({
       useAppStore.getState().addToast({
         title: 'Delete Failed',
         message: 'Could not delete the recording from storage.',
+        type: 'error',
+      });
+    }
+  },
+
+  deleteMultipleRecordings: async (ids: string[]) => {
+    if (ids.length === 0) return;
+    try {
+      const idSet = new Set(ids);
+      get().recordings.forEach((r) => {
+        if (idSet.has(r.id) && r.previewUrl) {
+          URL.revokeObjectURL(r.previewUrl);
+        }
+      });
+      await recordingStorage.deleteMultiple(ids);
+      await get().loadRecordings();
+      if (get().selectedRecording && idSet.has(get().selectedRecording!.id)) {
+        set({ selectedRecording: null });
+      }
+      useAppStore.getState().addToast({
+        title: 'Recordings Deleted',
+        message: `Successfully removed ${ids.length} recording${ids.length > 1 ? 's' : ''}.`,
+        type: 'info',
+      });
+    } catch (err) {
+      console.error('Failed to delete recordings:', err);
+      useAppStore.getState().addToast({
+        title: 'Delete Failed',
+        message: 'Failed to delete selected recordings.',
         type: 'error',
       });
     }

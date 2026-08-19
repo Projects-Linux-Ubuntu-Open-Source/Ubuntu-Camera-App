@@ -1,39 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import {
   Film,
-  Video,
-  Mic,
-  Image as ImageIcon,
   Trash2,
   HardDrive,
-  Filter,
-  ArrowUpDown,
   Search,
-  DownloadCloud,
+  CheckSquare,
+  Square,
+  X,
+  Check,
 } from 'lucide-react';
 import { useRecorderStore } from '../stores/recorderStore';
 import { RecordingCard } from '../components/recordings/RecordingCard';
 import { MediaViewerModal } from '../components/recordings/MediaViewerModal';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { RecordingItem, RecordingType } from '../types/recording';
+import { RecordingItem } from '../types/recording';
 import { formatFileSize } from '../utils/formatters';
 
 type FilterType = 'all' | 'video' | 'audio' | 'photo';
 
 export const Recordings: React.FC = () => {
-  const { recordings, loadRecordings, deleteRecording, clearAllRecordings, storageUsage, isLoadingRecordings } =
-    useRecorderStore();
+  const {
+    recordings,
+    loadRecordings,
+    deleteRecording,
+    deleteMultipleRecordings,
+    clearAllRecordings,
+    storageUsage,
+  } = useRecorderStore();
 
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedItem, setSelectedItem] = useState<RecordingItem | null>(null);
   const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
 
+  // Multi-select state
+  const [isSelectionMode, setIsSelectionMode] = useState<boolean>(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleteSelectedModalOpen, setIsDeleteSelectedModalOpen] = useState<boolean>(false);
+
   useEffect(() => {
     loadRecordings();
   }, [loadRecordings]);
+
+  // Clean up selected IDs if recordings change
+  useEffect(() => {
+    const existingIds = new Set(recordings.map((r) => r.id));
+    setSelectedIds((prev) => prev.filter((id) => existingIds.has(id)));
+  }, [recordings]);
 
   const filteredRecordings = recordings.filter((item) => {
     if (activeFilter !== 'all' && item.type !== activeFilter) return false;
@@ -43,8 +57,44 @@ export const Recordings: React.FC = () => {
     return true;
   });
 
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    const allFilteredIds = filteredRecordings.map((r) => r.id);
+    setSelectedIds(allFilteredIds);
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedIds([]);
+  };
+
+  const handleToggleSelectionMode = () => {
+    if (isSelectionMode) {
+      setIsSelectionMode(false);
+      setSelectedIds([]);
+    } else {
+      setIsSelectionMode(true);
+    }
+  };
+
+  const handleConfirmDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    await deleteMultipleRecordings(selectedIds);
+    setSelectedIds([]);
+    setIsDeleteSelectedModalOpen(false);
+    if (recordings.length <= selectedIds.length) {
+      setIsSelectionMode(false);
+    }
+  };
+
   const handleClearAllConfirm = () => {
     clearAllRecordings();
+    setSelectedIds([]);
+    setIsSelectionMode(false);
     setIsClearAllModalOpen(false);
   };
 
@@ -54,6 +104,10 @@ export const Recordings: React.FC = () => {
     audio: recordings.filter((r) => r.type === 'audio').length,
     photo: recordings.filter((r) => r.type === 'photo').length,
   };
+
+  const allFilteredSelected =
+    filteredRecordings.length > 0 &&
+    filteredRecordings.every((r) => selectedIds.includes(r.id));
 
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-7xl mx-auto w-full">
@@ -70,17 +124,86 @@ export const Recordings: React.FC = () => {
         </div>
 
         {recordings.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsClearAllModalOpen(true)}
-            leftIcon={<Trash2 className="w-3.5 h-3.5 text-red-400" />}
-            className="text-red-400 hover:text-red-300 hover:bg-red-950/40"
-          >
-            Clear All
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={isSelectionMode ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={handleToggleSelectionMode}
+              leftIcon={<CheckSquare className="w-3.5 h-3.5" />}
+            >
+              {isSelectionMode ? 'Exit Selection' : 'Select Multiple'}
+            </Button>
+
+            {!isSelectionMode && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsClearAllModalOpen(true)}
+                leftIcon={<Trash2 className="w-3.5 h-3.5 text-red-400" />}
+                className="text-red-400 hover:text-red-300 hover:bg-red-950/40"
+              >
+                Clear All
+              </Button>
+            )}
+          </div>
         )}
       </div>
+
+      {/* Multi-Select Action Bar */}
+      {isSelectionMode && (
+        <div className="bg-[#18202b] border border-[#e95420]/50 rounded-xl p-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-lg shadow-[#e95420]/5">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-white flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#e95420] animate-pulse" />
+              <span>
+                {selectedIds.length} of {filteredRecordings.length} selected
+              </span>
+            </span>
+
+            <div className="h-4 w-px bg-neutral-700 hidden sm:block" />
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={allFilteredSelected ? handleDeselectAll : handleSelectAll}
+                className="text-xs text-neutral-300 hover:text-white font-medium hover:underline cursor-pointer flex items-center gap-1.5"
+              >
+                {allFilteredSelected ? (
+                  <>
+                    <Square className="w-3.5 h-3.5" />
+                    <span>Deselect All</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckSquare className="w-3.5 h-3.5" />
+                    <span>Select All</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 justify-end">
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={selectedIds.length === 0}
+              onClick={() => setIsDeleteSelectedModalOpen(true)}
+              leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+            >
+              Delete Selected ({selectedIds.length})
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleToggleSelectionMode}
+              leftIcon={<X className="w-3.5 h-3.5" />}
+            >
+              Done
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Storage & Filter Header Bar */}
       <div className="bg-[#11151a] border border-[#1e252e] rounded-xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
@@ -147,6 +270,9 @@ export const Recordings: React.FC = () => {
               item={item}
               onPlay={(rec) => setSelectedItem(rec)}
               onDelete={(id) => deleteRecording(id)}
+              isSelectionMode={isSelectionMode}
+              isSelected={selectedIds.includes(item.id)}
+              onToggleSelect={handleToggleSelect}
             />
           ))}
         </div>
@@ -179,6 +305,19 @@ export const Recordings: React.FC = () => {
         variant="danger"
         onConfirm={handleClearAllConfirm}
         onClose={() => setIsClearAllModalOpen(false)}
+      />
+
+      {/* Delete Selected Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isDeleteSelectedModalOpen}
+        title="Delete Selected Recordings"
+        message={`Are you sure you want to delete ${selectedIds.length} selected recording${
+          selectedIds.length > 1 ? 's' : ''
+        }? This will permanently remove these files from local storage.`}
+        confirmLabel={`Delete ${selectedIds.length} Item${selectedIds.length > 1 ? 's' : ''}`}
+        variant="danger"
+        onConfirm={handleConfirmDeleteSelected}
+        onClose={() => setIsDeleteSelectedModalOpen(false)}
       />
     </div>
   );

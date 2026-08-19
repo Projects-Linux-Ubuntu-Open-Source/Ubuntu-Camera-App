@@ -6,9 +6,9 @@ import {
   Play,
   Download,
   Trash2,
-  Clock,
   HardDrive,
   Calendar,
+  Check,
 } from 'lucide-react';
 import { RecordingItem } from '../../types/recording';
 import { formatDate, formatDuration, formatFileSize } from '../../utils/formatters';
@@ -21,10 +21,35 @@ interface RecordingCardProps {
   item: RecordingItem;
   onPlay: (item: RecordingItem) => void;
   onDelete: (id: string) => void;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
-export const RecordingCard: React.FC<RecordingCardProps> = ({ item, onPlay, onDelete }) => {
+export const RecordingCard: React.FC<RecordingCardProps> = ({
+  item,
+  onPlay,
+  onDelete,
+  isSelectionMode = false,
+  isSelected = false,
+  onToggleSelect,
+}) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+  const handleCardClick = () => {
+    if (isSelectionMode && onToggleSelect) {
+      onToggleSelect(item.id);
+    } else {
+      onPlay(item);
+    }
+  };
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onToggleSelect) {
+      onToggleSelect(item.id);
+    }
+  };
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -57,8 +82,12 @@ export const RecordingCard: React.FC<RecordingCardProps> = ({ item, onPlay, onDe
   return (
     <>
       <div
-        onClick={() => onPlay(item)}
-        className="group bg-[#11151a] hover:bg-[#141920] border border-[#1e252e] hover:border-[#2f3b4a] rounded-xl p-3.5 flex flex-col justify-between gap-3.5 transition-all duration-150 cursor-pointer shadow-md hover:shadow-xl"
+        onClick={handleCardClick}
+        className={`group border rounded-xl p-3.5 flex flex-col justify-between gap-3.5 transition-all duration-150 cursor-pointer shadow-md hover:shadow-xl relative ${
+          isSelected
+            ? 'bg-[#18202b] border-[#e95420] ring-2 ring-[#e95420]/30 shadow-[#e95420]/5'
+            : 'bg-[#11151a] hover:bg-[#141920] border-[#1e252e] hover:border-[#2f3b4a]'
+        }`}
       >
         {/* Top Media Preview / Icon Block */}
         <div className="relative w-full aspect-video bg-[#090b0e] rounded-lg overflow-hidden border border-[#1a202a] flex items-center justify-center">
@@ -74,9 +103,11 @@ export const RecordingCard: React.FC<RecordingCardProps> = ({ item, onPlay, onDe
                 src={item.previewUrl}
                 className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
               />
-              <div className="absolute w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/20 group-hover:scale-110 group-hover:bg-[#e95420] transition-all">
-                <Play className="w-4 h-4 fill-current ml-0.5" />
-              </div>
+              {!isSelectionMode && (
+                <div className="absolute w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/20 group-hover:scale-110 group-hover:bg-[#e95420] transition-all">
+                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-2 text-neutral-400">
@@ -100,6 +131,22 @@ export const RecordingCard: React.FC<RecordingCardProps> = ({ item, onPlay, onDe
           <div className="absolute top-2 left-2">
             {typeBadges[item.type]}
           </div>
+
+          {/* Selection Checkbox (always visible in selection mode) */}
+          {isSelectionMode && (
+            <button
+              type="button"
+              onClick={handleCheckboxClick}
+              className={`absolute top-2 right-2 w-6 h-6 rounded-md flex items-center justify-center transition-all cursor-pointer shadow-md ${
+                isSelected
+                  ? 'bg-[#e95420] text-white border border-[#ff6e3a]'
+                  : 'bg-black/70 backdrop-blur-md text-transparent border border-white/40 hover:border-white'
+              }`}
+              aria-label={isSelected ? 'Deselect recording' : 'Select recording'}
+            >
+              <Check className={`w-4 h-4 stroke-[3] ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
+            </button>
+          )}
         </div>
 
         {/* Title & Metadata */}
@@ -127,14 +174,36 @@ export const RecordingCard: React.FC<RecordingCardProps> = ({ item, onPlay, onDe
 
         {/* Action Buttons */}
         <div className="flex items-center justify-between pt-2 border-t border-[#1a202a] text-xs">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onPlay(item)}
-            leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
-          >
-            Open
-          </Button>
+          {isSelectionMode ? (
+            <button
+              type="button"
+              onClick={handleCheckboxClick}
+              className="text-xs font-medium text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer py-1"
+            >
+              <span
+                className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                  isSelected
+                    ? 'bg-[#e95420] border-[#e95420] text-white'
+                    : 'border-neutral-500 bg-transparent'
+                }`}
+              >
+                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+              </span>
+              <span>{isSelected ? 'Selected' : 'Select'}</span>
+            </button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlay(item);
+              }}
+              leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
+            >
+              Open
+            </Button>
+          )}
 
           <div className="flex items-center gap-1">
             <button
@@ -144,13 +213,15 @@ export const RecordingCard: React.FC<RecordingCardProps> = ({ item, onPlay, onDe
             >
               <Download className="w-3.5 h-3.5" />
             </button>
-            <button
-              onClick={handleDeleteClick}
-              title="Delete recording"
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-red-950/40 transition-colors cursor-pointer"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+            {!isSelectionMode && (
+              <button
+                onClick={handleDeleteClick}
+                title="Delete recording"
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-red-950/40 transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </div>
