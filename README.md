@@ -1,134 +1,133 @@
 # Ubuntu Camera & Audio Recorder
 
-> **Phase 1: React & TypeScript Frontend Foundation**  
-> A desktop-style Camera and Audio Recording studio application designed for Ubuntu / Linux desktop environments with a clean, hardware-integrated React architecture.
+A modern desktop-grade Camera and Audio Recording application built for Ubuntu Linux with React, Vite, TypeScript, Tailwind CSS, and Electron.
 
 ---
 
-## 🎯 Project Overview
+## Features
 
-**Ubuntu Camera & Audio Recorder** provides a native-feel desktop recording suite directly inside the browser. It allows users to monitor live camera feeds, capture high-resolution still photographs, analyze acoustic microphone signals with real-time VU and frequency spectrum visualizers, record synchronized audio/video sessions, and manage a persistent library of media captures.
-
-This codebase serves as **Phase 1: Pure Frontend & Services Architecture**, intentionally decoupled from native runtimes so it runs seamlessly in standard modern browsers while providing clean service abstractions (`CameraService`, `AudioService`, `RecordingService`, `RecordingStorage`) ready to connect to **Electron / PipeWire / FFmpeg** in Phase 2.
-
----
-
-## 🛠️ Technology Stack
-
-- **Framework**: React 19 with TypeScript
-- **Bundler**: Vite
-- **Styling**: Tailwind CSS (with Ubuntu dark theme aesthetics `#0b0d10` & `#11151a` panels)
-- **State Management**: Zustand
-- **Icons**: Lucide React
-- **Media APIs**:
-  - `navigator.mediaDevices.getUserMedia()`
-  - `navigator.mediaDevices.enumerateDevices()`
-  - `MediaRecorder` API
-  - `Web Audio API` (`AudioContext`, `AnalyserNode` for dB & frequency spectrum)
-- **Local Persistence**: IndexedDB (via `RecordingStorage` abstraction)
+- **Live Viewfinder & Still Capture**: Real-time camera streaming with rule-of-thirds composition grid, horizontal mirroring, and instant PNG snapshot capture.
+- **Acoustic Spectrum & VU Metering**: Real-time frequency analysis, decibel metering, audio device routing, and voice track recording.
+- **Combined Studio Recorder**: Synchronized camera and microphone recording with pause, resume, quality presets, and duration timers.
+- **Recordings Library**: Browse, search, filter, preview, batch-select, download, and delete saved recordings.
+- **Native Electron Desktop Integration**:
+  - Secure IPC with `contextIsolation: true`, `nodeIntegration: false`, and `sandbox: true`.
+  - Native filesystem storage (`~/Videos/CameraRecorder`) with directory picker and "Show in Folder" file manager integration.
+  - Native desktop notifications for recording lifecycle events.
+  - Full Ubuntu native Application Menu (File, View, Help) with global keyboard shortcuts.
+- **Dual-Mode Architecture**: Runs as a standard browser web app as well as a native Electron Ubuntu desktop application without code duplication.
 
 ---
 
-## 🚀 Quick Start
+## Architecture
 
-### Installation
-
-```bash
-npm install
+```text
+camera-recorder/
+├── electron/
+│   ├── main.ts                     # Electron main process & window lifecycle
+│   ├── preload.ts                  # Secure contextBridge exposing window.electronAPI
+│   ├── ipc/                        # Modular IPC request/response handlers
+│   │   ├── recording.ts            # Native recording status & control
+│   │   ├── filesystem.ts           # Desktop storage & file operations
+│   │   ├── devices.ts              # Device enumeration bridge
+│   │   └── system.ts               # Notifications & system info
+│   ├── services/
+│   │   ├── recordingService.ts     # Session state & duration management
+│   │   ├── filesystemService.ts    # Filesystem I/O, directory scanning & opening
+│   │   ├── systemService.ts        # Desktop notifications & OS info
+│   │   └── media/
+│   │       ├── ffmpegService.ts    # Future-ready FFmpeg transcoding bridge
+│   │       └── recordingPipeline.ts# PipeWire / GStreamer pipeline abstraction
+│   └── utils/
+│       ├── logger.ts               # Structured development logger
+│       └── paths.ts                # Ubuntu path resolver & preferences
+│
+├── src/
+│   ├── components/                 # UI components (camera, audio, recordings, layout)
+│   ├── pages/                      # Dashboard, Camera, Audio, Recorder, Recordings, Settings
+│   ├── hooks/                      # useCamera, useAudio, useMediaRecorder, useMediaDevices
+│   ├── services/
+│   │   ├── platform/
+│   │   │   └── platformBridge.ts   # Unified browser/electron platform abstraction
+│   │   ├── media/                  # WebRTC & MediaRecorder capture services
+│   │   └── storage/                # IndexedDB client-side database
+│   ├── stores/                     # Zustand stores (appStore, recorderStore)
+│   ├── types/
+│   │   ├── electron.d.ts           # window.electronAPI TypeScript declarations
+│   │   ├── recording.ts            # Media item & codec types
+│   │   └── camera.ts               # Resolution & FPS configuration
+│   └── utils/
+│       ├── environment.ts          # isElectron() runtime detector
+│       ├── mediaUtils.ts           # Codec detection & file helpers
+│       └── formatters.ts           # Date, time, and file size formatters
+│
+├── package.json
+├── vite.config.ts
+├── tsconfig.json
+└── README.md
 ```
 
-### Start Development Server
+---
 
+## Development & Build Commands
+
+### 1. Browser Development (Vite)
+Runs the standalone web application with HMR / fast dev server:
 ```bash
 npm run dev
 ```
 
-The application will be served at `http://localhost:3000`.
+### 2. Electron Desktop Development
+Compiles Electron TypeScript files and launches the Ubuntu desktop window:
+```bash
+npm run electron:dev
+```
 
-### Production Build
-
+### 3. Production Build
+Builds the Vite static web assets (`dist/`) and bundles the Electron main & preload scripts (`dist-electron/`):
 ```bash
 npm run build
 ```
 
-### Preview Production Build
-
+### 4. Electron Desktop Production Preview
+Runs the compiled production desktop application:
 ```bash
-npm run preview
+npm run electron:preview
+```
+
+### 5. Linux Packaging (AppImage & .deb)
+Packages the application into Linux binaries using `electron-builder`:
+```bash
+# Package for all configured Linux targets (AppImage and deb)
+npm run package:linux
+
+# Package as AppImage only
+npm run package:appimage
+
+# Package as Debian package (.deb) only
+npm run package:deb
 ```
 
 ---
 
-## 📂 Project Architecture
+## Ubuntu System Dependencies
 
-```text
-src/
-├── components/
-│   ├── layout/          # WindowFrame, Sidebar, Titlebar
-│   ├── camera/          # CameraPreview, CameraControls, SnapshotModal
-│   ├── audio/           # AudioVisualizer (Canvas VU meter & spectrum), Controls
-│   ├── recorder/        # Combined Studio Viewfinder & RecordingIndicator
-│   ├── recordings/      # RecordingCard, MediaViewerModal
-│   ├── devices/         # DeviceSelector, PermissionBanner
-│   └── ui/              # Button, Card, Badge, Select, Modal, Toast
-│
-├── hooks/
-│   ├── useCamera.ts         # Viewfinder lifecycle, snapshot, telemetry
-│   ├── useAudio.ts          # Microphone streaming & real-time audio analysis loop
-│   ├── useMediaDevices.ts   # Device detection & 'devicechange' listener
-│   └── useMediaRecorder.ts  # MediaRecorder orchestration & duration timer
-│
-├── services/
-│   ├── media/
-│   │   ├── cameraService.ts     # CameraService interface & Browser implementation
-│   │   ├── audioService.ts      # AudioService interface & Web Audio API implementation
-│   │   └── recordingService.ts  # RecordingService interface & MediaRecorder implementation
-│   └── storage/
-│       └── recordingStorage.ts  # RecordingStorage interface & IndexedDB implementation
-│
-├── stores/
-│   ├── appStore.ts          # Page routing, toasts, app settings
-│   ├── cameraStore.ts       # Camera resolution, fps, mirror, state
-│   └── recorderStore.ts     # Global recordings list, duration, storage usage
-│
-├── types/                   # Strongly-typed interfaces for devices, media, recordings
-└── utils/                   # Formatters, MIME detection, download utilities
+For packaging and native media processing on Ubuntu Linux:
+```bash
+# General build tools
+sudo apt update
+sudo apt install -y build-essential libssl-dev
+
+# Optional FFmpeg tools for advanced transcoding
+sudo apt install -y ffmpeg
 ```
 
 ---
 
-## 🔒 Browser Permissions & Fallbacks
+## Security Model
 
-- **Camera & Microphone Access**: The application queries hardware permissions using standard Web APIs. If permissions are dismissed or blocked, a dismissible hardware assistance banner guides the user to grant access in their browser address bar without crashing the UI.
-- **Device Hotplugging**: Automatically listens to the `devicechange` hardware event, dynamically updating device dropdowns when webcams or USB microphones are plugged in or disconnected.
-
----
-
-## ⚠️ Phase 1 Limitations
-
-- **Browser Sandboxing**: Media recordings are saved inside browser IndexedDB storage rather than writing directly to `/home/user/Videos` or custom filesystem paths. Files can be individually downloaded or exported in standard formats (`.webm`, `.png`, `.mp4`).
-- **Codec Constraints**: Available recording codecs (VP9, VP8, H.264, Opus, AAC) depend on browser engine support.
-
----
-
-## 🔮 Phase 2: Planned Electron Architecture
-
-In Phase 2, this frontend will integrate with Electron without requiring changes to the React components. The service interfaces (`CameraService`, `AudioService`, `RecordingStorage`) will be backed by Electron IPC channels:
-
-```text
-React UI Components
-        ↓
-Application Services Layer (CameraService / RecordingStorage)
-        ↓
-Electron IPC Bridge (preload.ts / contextBridge)
-        ↓
-Node.js Main Process & Native Linux APIs (PipeWire / ALSA / V4L2 / FFmpeg)
-        ↓
-Ubuntu Filesystem Storage (~/Videos/Recordings, ~/Pictures/Captures)
-```
-
----
-
-## 📄 License
-
-Apache-2.0
+The Electron configuration implements strict security best practices:
+- **`contextIsolation: true`**: Prevents the renderer from accessing Node.js internals or the Electron main process prototype chain.
+- **`nodeIntegration: false`**: Disables Node.js in the renderer window.
+- **`sandbox: true`**: Enables Chromium sandbox isolation for renderer processes.
+- **Strict Preload API**: Only explicitly required functions are exposed via `window.electronAPI`.

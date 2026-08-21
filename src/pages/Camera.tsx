@@ -10,7 +10,7 @@ import { SnapshotModal } from '../components/camera/SnapshotModal';
 import { DeviceSelector } from '../components/devices/DeviceSelector';
 import { PermissionBanner } from '../components/devices/PermissionBanner';
 import { SnapshotData } from '../types/camera';
-import { recordingStorage } from '../services/storage/recordingStorage';
+import { PlatformBridge } from '../services/platform/platformBridge';
 
 export const Camera: React.FC = () => {
   const {
@@ -70,7 +70,7 @@ export const Camera: React.FC = () => {
 
   const handleSaveToLibrary = async (snapshot: SnapshotData) => {
     try {
-      await recordingStorage.save({
+      await PlatformBridge.saveRecording({
         name: snapshot.filename,
         type: 'photo',
         duration: 0,

@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { recordingService, RecordingResult } from '../services/media/recordingService';
-import { recordingStorage } from '../services/storage/recordingStorage';
-import { RecordingItem, RecordingOptions, RecordingStatus, RecordingType } from '../types/recording';
+import { PlatformBridge } from '../services/platform/platformBridge';
+import { RecordingItem, RecordingOptions, RecordingType } from '../types/recording';
 import { generateFilename } from '../utils/mediaUtils';
 import { useRecorderStore } from '../stores/recorderStore';
 import { useAppStore } from '../stores/appStore';
@@ -97,7 +97,7 @@ export function useMediaRecorder() {
       const type = activeTypeRef.current;
       const filename = customName || generateFilename(type, result.mimeType);
 
-      const savedItem = await recordingStorage.save({
+      const savedItem = await PlatformBridge.saveRecording({
         name: filename,
         type,
         duration: Math.max(1, Math.round(result.duration)),

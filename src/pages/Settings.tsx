@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Settings as SettingsIcon,
   Camera,
@@ -8,6 +8,10 @@ import {
   Cpu,
   Info,
   CheckCircle2,
+  FolderOpen,
+  FolderSymlink,
+  Monitor,
+  Globe,
 } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { useMediaDevices } from '../hooks/useMediaDevices';
@@ -16,10 +20,22 @@ import { Select } from '../components/ui/Select';
 import { Button } from '../components/ui/Button';
 import { COMMON_RESOLUTIONS, FPS_OPTIONS, FPSOption } from '../types/camera';
 import { getSupportedVideoMimeTypes, getSupportedAudioMimeTypes } from '../utils/mediaUtils';
+import { PlatformBridge } from '../services/platform/platformBridge';
+import { isElectron } from '../utils/environment';
 
 export const Settings: React.FC = () => {
   const { settings, updateSettings, addToast } = useAppStore();
   const { videoInputs, audioInputs, refreshDevices } = useMediaDevices();
+  const [storagePath, setStoragePath] = useState<string>('~/Videos/CameraRecorder');
+  const [isDesktopApp, setIsDesktopApp] = useState<boolean>(false);
+
+  useEffect(() => {
+    const desktop = isElectron();
+    setIsDesktopApp(desktop);
+    if (desktop) {
+      PlatformBridge.getStorageLocation().then(setStoragePath);
+    }
+  }, []);
 
   const supportedVideoMimes = getSupportedVideoMimeTypes();
   const supportedAudioMimes = getSupportedAudioMimeTypes();
@@ -40,6 +56,24 @@ export const Settings: React.FC = () => {
   }));
 
   const currentResValue = `${settings.defaultResolution.width}x${settings.defaultResolution.height}`;
+
+  const handleChangeStorageDirectory = async () => {
+    const chosen = await PlatformBridge.chooseStorageDirectory();
+    if (chosen) {
+      setStoragePath(chosen);
+      addToast({
+        title: 'Storage Directory Updated',
+        message: `Recordings will now be saved to: ${chosen}`,
+        type: 'success',
+      });
+    }
+  };
+
+  const handleOpenFolder = async () => {
+    if (isDesktopApp) {
+      await PlatformBridge.showInFolder(storagePath);
+    }
+  };
 
   const handleSaveNotification = () => {
     addToast({
@@ -67,6 +101,94 @@ export const Settings: React.FC = () => {
           Save Changes
         </Button>
       </div>
+
+      {/* Storage & Platform Runtime Card */}
+      <Card
+        title={
+          <div className="flex items-center gap-2">
+            <HardDrive className="w-4 h-4 text-purple-400" />
+            <span>Storage & Desktop Runtime</span>
+          </div>
+        }
+        subtitle="Desktop filesystem storage location and runtime environment"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3.5 bg-[#090c10] border border-[#1e252e] rounded-xl">
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center border ${
+                  isDesktopApp
+                    ? 'bg-[#e95420]/10 border-[#e95420]/30 text-[#e95420]'
+                    : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                }`}
+              >
+                {isDesktopApp ? <Monitor className="w-5 h-5" /> : <Globe className="w-5 h-5" />}
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-neutral-200">
+                  {isDesktopApp ? 'Ubuntu Desktop Mode (Electron)' : 'Browser Mode (Web Sandbox)'}
+                </div>
+                <div className="text-[11px] text-neutral-400">
+                  {isDesktopApp
+                    ? 'Running with native secure IPC, filesystem access, and desktop menus.'
+                    : 'Running in browser preview with persistent client-side database storage.'}
+                </div>
+              </div>
+            </div>
+
+            <span
+              className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                isDesktopApp
+                  ? 'bg-[#e95420]/10 text-[#e95420] border-[#e95420]/30'
+                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+              }`}
+            >
+              {isDesktopApp ? 'Electron Native' : 'Browser WebAPI'}
+            </span>
+          </div>
+
+          {/* Directory path and actions */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-neutral-300">
+              {isDesktopApp ? 'Recordings Folder (Ubuntu Filesystem)' : 'Storage Target'}
+            </label>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="flex-1 bg-[#161c24] border border-[#232b36] rounded-lg px-3.5 py-2 text-xs font-mono text-neutral-300 truncate">
+                {storagePath}
+              </div>
+              {isDesktopApp ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleChangeStorageDirectory}
+                    leftIcon={<FolderSymlink className="w-3.5 h-3.5" />}
+                  >
+                    Change Folder...
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleOpenFolder}
+                    leftIcon={<FolderOpen className="w-3.5 h-3.5" />}
+                  >
+                    Open Folder
+                  </Button>
+                </div>
+              ) : (
+                <span className="text-[11px] text-neutral-500 self-center">
+                  IndexedDB persistent storage
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-neutral-500">
+              {isDesktopApp
+                ? 'Captured videos, audio tracks, and still snapshots are automatically saved directly into this local folder.'
+                : 'In desktop Electron mode, recordings are saved directly to your native Ubuntu Videos folder.'}
+            </p>
+          </div>
+        </div>
+      </Card>
 
       {/* Camera Settings */}
       <Card
@@ -248,38 +370,6 @@ export const Settings: React.FC = () => {
             ]}
             onChange={(val) => updateSettings({ audioQuality: val as any })}
           />
-        </div>
-      </Card>
-
-      {/* Storage & Architecture Roadmap (Phase 1 vs Phase 2) */}
-      <Card
-        title={
-          <div className="flex items-center gap-2">
-            <HardDrive className="w-4 h-4 text-purple-400" />
-            <span>Storage & Desktop Runtime</span>
-          </div>
-        }
-        subtitle="Storage layer abstraction and native filesystem architecture"
-      >
-        <div className="p-4 rounded-xl bg-[#090c10] border border-[#1e252e] space-y-3 text-xs">
-          <div className="flex items-start gap-2.5">
-            <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-            <div>
-              <div className="font-semibold text-neutral-200">Browser mode</div>
-              <p className="text-neutral-400 mt-0.5 leading-relaxed">
-                Electron desktop storage will be available in a future version. Currently, all
-                captured photos, audio recordings, and videos are safely stored in browser
-                IndexedDB storage and can be exported at any time with one click.
-              </p>
-            </div>
-          </div>
-
-          <div className="border-t border-[#1a202a] pt-3 text-neutral-400 flex items-center justify-between">
-            <span className="font-mono">Storage Abstraction Engine: Active (RecordingStorage)</span>
-            <span className="text-emerald-400 flex items-center gap-1 font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Phase 1 Ready
-            </span>
-          </div>
         </div>
       </Card>
     </div>

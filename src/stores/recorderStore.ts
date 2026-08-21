@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { RecordingItem, RecordingStatus, RecordingType } from '../types/recording';
 import { recordingStorage } from '../services/storage/recordingStorage';
+import { PlatformBridge } from '../services/platform/platformBridge';
 import { useAppStore } from './appStore';
 
 interface RecorderState {
@@ -55,7 +56,7 @@ export const useRecorderStore = create<RecorderState>((set, get) => ({
       if (itemToDelete?.previewUrl) {
         URL.revokeObjectURL(itemToDelete.previewUrl);
       }
-      await recordingStorage.delete(id);
+      await PlatformBridge.deleteRecording(id, itemToDelete?.filePath);
       await get().loadRecordings();
       if (get().selectedRecording?.id === id) {
         set({ selectedRecording: null });
@@ -79,12 +80,13 @@ export const useRecorderStore = create<RecorderState>((set, get) => ({
     if (ids.length === 0) return;
     try {
       const idSet = new Set(ids);
-      get().recordings.forEach((r) => {
-        if (idSet.has(r.id) && r.previewUrl) {
+      const itemsToDelete = get().recordings.filter((r) => idSet.has(r.id));
+      itemsToDelete.forEach((r) => {
+        if (r.previewUrl) {
           URL.revokeObjectURL(r.previewUrl);
         }
       });
-      await recordingStorage.deleteMultiple(ids);
+      await PlatformBridge.deleteMultiple(itemsToDelete);
       await get().loadRecordings();
       if (get().selectedRecording && idSet.has(get().selectedRecording!.id)) {
         set({ selectedRecording: null });
@@ -106,9 +108,11 @@ export const useRecorderStore = create<RecorderState>((set, get) => ({
 
   clearAllRecordings: async () => {
     try {
-      get().recordings.forEach((r) => {
+      const allItems = get().recordings;
+      allItems.forEach((r) => {
         if (r.previewUrl) URL.revokeObjectURL(r.previewUrl);
       });
+      await PlatformBridge.deleteMultiple(allItems);
       await recordingStorage.clearAll();
       await get().loadRecordings();
       set({ selectedRecording: null });

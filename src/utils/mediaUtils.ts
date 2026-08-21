@@ -77,6 +77,13 @@ export function generateFilename(type: 'video' | 'audio' | 'photo', mimeType?: s
 }
 
 /**
+ * Converts a Blob to an ArrayBuffer
+ */
+export async function blobToArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
+  return await blob.arrayBuffer();
+}
+
+/**
  * Triggers a browser file download for a Blob
  */
 export function downloadBlob(blob: Blob, filename: string): void {

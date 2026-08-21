@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Download, Trash2, Video, Mic, Image as ImageIcon, Info } from 'lucide-react';
+import { Download, Trash2, Video, Mic, Image as ImageIcon, Info, FolderOpen } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { RecordingItem } from '../../types/recording';
 import { formatDate, formatDuration, formatFileSize } from '../../utils/formatters';
 import { downloadBlob } from '../../utils/mediaUtils';
+import { PlatformBridge } from '../../services/platform/platformBridge';
+import { isElectron } from '../../utils/environment';
 
 interface MediaViewerModalProps {
   item: RecordingItem | null;
@@ -30,6 +32,12 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
     }
   };
 
+  const handleShowInFolder = () => {
+    if (item.filePath) {
+      PlatformBridge.showInFolder(item.filePath);
+    }
+  };
+
   const handleConfirmDelete = () => {
     onDelete(item.id);
     setIsConfirmOpen(false);
@@ -41,6 +49,8 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
     audio: <Mic className="w-4 h-4 text-emerald-400" />,
     photo: <ImageIcon className="w-4 h-4 text-amber-400" />,
   };
+
+  const isDesktop = isElectron();
 
   return (
     <>
@@ -64,6 +74,16 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
             >
               Delete
             </Button>
+            {isDesktop && item.filePath && (
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={handleShowInFolder}
+                leftIcon={<FolderOpen className="w-4 h-4" />}
+              >
+                Show in Folder
+              </Button>
+            )}
             <Button
               variant="primary"
               size="md"

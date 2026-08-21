@@ -26,6 +26,7 @@ export interface RecordingItem {
   blob?: Blob;
   previewUrl?: string; // object URL or data URL
   thumbnailUrl?: string;
+  filePath?: string; // Native desktop file path (in Electron)
   metadata?: RecordingMetadata;
 }
 
