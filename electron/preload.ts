@@ -38,6 +38,13 @@ const electronAPI = {
     getDevices: () => ipcRenderer.invoke('devices:get'),
   },
 
+  window: {
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+    maximize: () => ipcRenderer.invoke('window:maximize'),
+    close: () => ipcRenderer.invoke('window:close'),
+    quit: () => ipcRenderer.invoke('window:quit'),
+  },
+
   onMenuAction: (callback: (action: string) => void) => {
     const subscription = (_event: IpcRendererEvent, action: string) => callback(action);
     ipcRenderer.on('menu:action', subscription);

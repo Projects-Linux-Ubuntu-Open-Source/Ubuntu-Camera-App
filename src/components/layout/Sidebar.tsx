@@ -45,8 +45,16 @@ export const Sidebar: React.FC = () => {
       {/* Top Section: App Branding */}
       <div>
         <div className="p-4 border-b border-[#1a2029] flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#e95420] to-[#c73e10] flex items-center justify-center shadow-md shadow-orange-950/40 text-white font-bold text-base">
-            <Video className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-lg overflow-hidden bg-gradient-to-br from-[#e95420] to-[#c73e10] flex items-center justify-center shadow-md shadow-orange-950/40 text-white shrink-0">
+            <img
+              src="/icon.png"
+              alt="Camera Recorder Icon"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
           </div>
           <div>
             <h1 className="text-sm font-bold text-white tracking-wide flex items-center gap-1.5">

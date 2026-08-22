@@ -95,6 +95,7 @@
 - **Default Storage Path**: Automatically creates and maintains `~/Videos/CameraRecorder` or respects user-selected directories.
 - **Native OS Notifications**: Alerts on recording completion, snapshot saved, and disk space warnings using desktop notification daemons.
 - **Ubuntu Shell Shortcuts**: Standard menu accelerators (`Ctrl+N`, `Ctrl+Shift+C`, `Ctrl+Shift+A`, `Ctrl+,`) linked to reactive in-app views.
+- **Zero Background Persistence**: Automatically halts all recording sessions and cleanly terminates the entire Node.js and Chromium process tree upon window close or quit (`window-all-closed`, `SIGINT`, `SIGTERM`), preventing zombie processes.
 
 ---
 
@@ -144,7 +145,9 @@ To protect user privacy and system security, the Electron architecture adheres t
 ### Directory Tree
 
 ```text
-camera-recorder/
+├── assets/                           # 🎨 Application Assets & Icons
+│   └── Icon.png                      # High-resolution desktop application icon
+│
 ├── electron/                         # 🖥️ Native Electron Main Process
 │   ├── main.ts                       # Main process entry & window manager
 │   ├── preload.ts                    # ContextBridge security barrier & API exposure

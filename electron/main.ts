@@ -1,5 +1,6 @@
-import { app, BrowserWindow, Menu, MenuItemConstructorOptions, shell, dialog } from 'electron';
+import { app, BrowserWindow, Menu, MenuItemConstructorOptions, shell, dialog, nativeImage } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { logger } from './utils/logger';
 import { PathManager } from './utils/paths';
@@ -7,7 +8,9 @@ import { registerFilesystemIpc } from './ipc/filesystem';
 import { registerRecordingIpc } from './ipc/recording';
 import { registerSystemIpc } from './ipc/system';
 import { registerDevicesIpc } from './ipc/devices';
+import { registerWindowIpc } from './ipc/window';
 import { filesystemService } from './services/filesystemService';
+import { recordingService } from './services/recordingService';
 
 const isDev = process.env.NODE_ENV !== 'production' || !app.isPackaged;
 let mainWindow: BrowserWindow | null = null;
@@ -136,6 +139,17 @@ async function createWindow(): Promise<BrowserWindow> {
     ? path.join(currentDir, 'preload.js')
     : path.join(currentDir, 'preload.js');
 
+  // Resolve application icon from assets
+  const appRoot = isDev ? process.cwd() : path.join(currentDir, '..');
+  const iconCandidates = [
+    path.join(appRoot, 'assets', 'Icon.png'),
+    path.join(appRoot, 'assets', 'icon.png'),
+    path.join(process.cwd(), 'assets', 'Icon.png'),
+    path.join(process.cwd(), 'public', 'icon.png'),
+  ];
+  const resolvedIconPath = iconCandidates.find((p) => fs.existsSync(p));
+  const appIcon = resolvedIconPath ? nativeImage.createFromPath(resolvedIconPath) : undefined;
+
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -143,6 +157,7 @@ async function createWindow(): Promise<BrowserWindow> {
     minHeight: 700,
     backgroundColor: '#0c0f14',
     title: 'Ubuntu Camera & Audio Recorder',
+    icon: appIcon,
     show: false, // Show once ready-to-show to prevent white flash
     webPreferences: {
       preload: preloadPath,
@@ -156,6 +171,13 @@ async function createWindow(): Promise<BrowserWindow> {
   win.once('ready-to-show', () => {
     win.show();
     logger.info('Electron', 'Main window created and displayed');
+  });
+
+  // When the window is closed, ensure cleanup and quit the application immediately
+  win.on('closed', () => {
+    logger.info('Electron', 'Main window closed event received.');
+    mainWindow = null;
+    app.quit();
   });
 
   // Handle renderer crash
@@ -216,6 +238,7 @@ if (!gotTheLock) {
     registerRecordingIpc();
     registerSystemIpc();
     registerDevicesIpc();
+    registerWindowIpc();
 
     // Create window & menu
     createApplicationMenu();
@@ -228,13 +251,43 @@ if (!gotTheLock) {
     });
   });
 
+  // When all windows are closed, ensure the entire app process exits immediately
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-      logger.info('Electron', 'All windows closed. Exiting application.');
-      app.quit();
+    logger.info('Electron', 'All windows closed. Quitting application process.');
+    app.quit();
+  });
+
+  // Cleanup hooks to ensure no background threads or timers linger
+  app.on('before-quit', () => {
+    logger.info('Electron', 'Application before-quit. Cleaning up active sessions.');
+    try {
+      recordingService.stopRecording();
+    } catch {
+      // safe fallback
     }
   });
+
+  app.on('will-quit', () => {
+    logger.info('Electron', 'Application will-quit. Exiting process.');
+    // Unref short timer to guarantee process terminates without hanging on open sockets/handles
+    setTimeout(() => {
+      process.exit(0);
+    }, 50).unref();
+  });
 }
+
+// OS process signal safety to guarantee process termination
+process.on('SIGINT', () => {
+  logger.info('Electron', 'Process received SIGINT. Exiting cleanly.');
+  app.quit();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  logger.info('Electron', 'Process received SIGTERM. Exiting cleanly.');
+  app.quit();
+  process.exit(0);
+});
 
 // Global process error safety
 process.on('uncaughtException', (error) => {
