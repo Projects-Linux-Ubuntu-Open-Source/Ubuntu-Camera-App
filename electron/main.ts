@@ -8,7 +8,9 @@ import { registerFilesystemIpc } from './ipc/filesystem';
 import { registerRecordingIpc } from './ipc/recording';
 import { registerSystemIpc } from './ipc/system';
 import { registerDevicesIpc } from './ipc/devices';
+import { registerWindowIpc } from './ipc/window';
 import { filesystemService } from './services/filesystemService';
+import { recordingService } from './services/recordingService';
 
 const isDev = process.env.NODE_ENV !== 'production' || !app.isPackaged;
 let mainWindow: BrowserWindow | null = null;
@@ -171,6 +173,13 @@ async function createWindow(): Promise<BrowserWindow> {
     logger.info('Electron', 'Main window created and displayed');
   });
 
+  // When the window is closed, ensure cleanup and quit the application immediately
+  win.on('closed', () => {
+    logger.info('Electron', 'Main window closed event received.');
+    mainWindow = null;
+    app.quit();
+  });
+
   // Handle renderer crash
   win.webContents.on('render-process-gone', (_event, details) => {
     logger.error('Electron', `Renderer process crashed: ${details.reason} (exitCode: ${details.exitCode})`);
@@ -229,6 +238,7 @@ if (!gotTheLock) {
     registerRecordingIpc();
     registerSystemIpc();
     registerDevicesIpc();
+    registerWindowIpc();
 
     // Create window & menu
     createApplicationMenu();
@@ -241,13 +251,43 @@ if (!gotTheLock) {
     });
   });
 
+  // When all windows are closed, ensure the entire app process exits immediately
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-      logger.info('Electron', 'All windows closed. Exiting application.');
-      app.quit();
+    logger.info('Electron', 'All windows closed. Quitting application process.');
+    app.quit();
+  });
+
+  // Cleanup hooks to ensure no background threads or timers linger
+  app.on('before-quit', () => {
+    logger.info('Electron', 'Application before-quit. Cleaning up active sessions.');
+    try {
+      recordingService.stopRecording();
+    } catch {
+      // safe fallback
     }
   });
+
+  app.on('will-quit', () => {
+    logger.info('Electron', 'Application will-quit. Exiting process.');
+    // Unref short timer to guarantee process terminates without hanging on open sockets/handles
+    setTimeout(() => {
+      process.exit(0);
+    }, 50).unref();
+  });
 }
+
+// OS process signal safety to guarantee process termination
+process.on('SIGINT', () => {
+  logger.info('Electron', 'Process received SIGINT. Exiting cleanly.');
+  app.quit();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  logger.info('Electron', 'Process received SIGTERM. Exiting cleanly.');
+  app.quit();
+  process.exit(0);
+});
 
 // Global process error safety
 process.on('uncaughtException', (error) => {

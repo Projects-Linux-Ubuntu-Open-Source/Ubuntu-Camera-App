@@ -53,6 +53,13 @@ export interface ElectronAPI {
     getDevices(): Promise<{ cameras: MediaDeviceInfo[]; microphones: MediaDeviceInfo[] }>;
   };
 
+  window?: {
+    minimize(): Promise<void>;
+    maximize(): Promise<void>;
+    close(): Promise<void>;
+    quit(): Promise<void>;
+  };
+
   onMenuAction(callback: (action: string) => void): () => void;
 }
 

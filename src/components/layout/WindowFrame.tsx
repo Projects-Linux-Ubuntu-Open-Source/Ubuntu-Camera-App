@@ -61,19 +61,26 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ children }) => {
         <div className="flex items-center gap-2">
           <button
             title="Minimize"
-            className="w-5 h-5 rounded-full bg-[#2a303c] hover:bg-[#384152] flex items-center justify-center text-neutral-400 hover:text-neutral-200 transition-colors"
+            onClick={() => window.electronAPI?.window?.minimize()}
+            className="w-5 h-5 rounded-full bg-[#2a303c] hover:bg-[#384152] flex items-center justify-center text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer"
           >
             <Minus className="w-2.5 h-2.5" />
           </button>
           <button
             title="Maximize"
-            className="w-5 h-5 rounded-full bg-[#2a303c] hover:bg-[#384152] flex items-center justify-center text-neutral-400 hover:text-neutral-200 transition-colors"
+            onClick={() => window.electronAPI?.window?.maximize()}
+            className="w-5 h-5 rounded-full bg-[#2a303c] hover:bg-[#384152] flex items-center justify-center text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer"
           >
             <Square className="w-2 h-2" />
           </button>
           <button
-            title="Close"
-            className="w-5 h-5 rounded-full bg-[#e95420]/80 hover:bg-[#e95420] flex items-center justify-center text-white transition-colors"
+            title="Close Application"
+            onClick={() => {
+              if (window.electronAPI?.window?.close) {
+                window.electronAPI.window.close();
+              }
+            }}
+            className="w-5 h-5 rounded-full bg-[#e95420]/80 hover:bg-[#e95420] flex items-center justify-center text-white transition-colors cursor-pointer"
           >
             <X className="w-2.5 h-2.5" />
           </button>

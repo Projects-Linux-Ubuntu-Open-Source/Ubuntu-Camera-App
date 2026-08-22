@@ -22,7 +22,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 
 // electron/main.ts
-var import_electron8 = require("electron");
+var import_electron9 = require("electron");
 var import_path3 = __toESM(require("path"), 1);
 var import_fs3 = __toESM(require("fs"), 1);
 var import_url = require("url");
@@ -547,9 +547,48 @@ function registerDevicesIpc() {
   logger.info("IPC", "Registered devices IPC handlers");
 }
 
+// electron/ipc/window.ts
+var import_electron8 = require("electron");
+function registerWindowIpc() {
+  import_electron8.ipcMain.handle("window:minimize", (event) => {
+    const win = import_electron8.BrowserWindow.fromWebContents(event.sender);
+    if (win) {
+      win.minimize();
+      logger.debug("Window", "Window minimized");
+    }
+  });
+  import_electron8.ipcMain.handle("window:maximize", (event) => {
+    const win = import_electron8.BrowserWindow.fromWebContents(event.sender);
+    if (win) {
+      if (win.isMaximized()) {
+        win.unmaximize();
+        logger.debug("Window", "Window restored from maximized");
+      } else {
+        win.maximize();
+        logger.debug("Window", "Window maximized");
+      }
+    }
+  });
+  import_electron8.ipcMain.handle("window:close", (event) => {
+    const win = import_electron8.BrowserWindow.fromWebContents(event.sender);
+    if (win) {
+      logger.info("Window", "Window close requested via UI. Closing window and quitting.");
+      win.close();
+    } else {
+      import_electron8.app.quit();
+    }
+  });
+  import_electron8.ipcMain.handle("window:quit", () => {
+    logger.info("Window", "Application quit requested via IPC. Exiting process.");
+    import_electron8.app.quit();
+    process.exit(0);
+  });
+  logger.info("IPC", "Registered window control IPC handlers");
+}
+
 // electron/main.ts
 var import_meta = {};
-var isDev = process.env.NODE_ENV !== "production" || !import_electron8.app.isPackaged;
+var isDev = process.env.NODE_ENV !== "production" || !import_electron9.app.isPackaged;
 var mainWindow = null;
 var getDirname = () => {
   try {
@@ -577,7 +616,7 @@ function createApplicationMenu() {
           accelerator: "CmdOrCtrl+O",
           click: async () => {
             const storagePath = PathManager.getStoragePath();
-            await import_electron8.shell.openPath(storagePath);
+            await import_electron9.shell.openPath(storagePath);
           }
         },
         {
@@ -640,11 +679,11 @@ function createApplicationMenu() {
         {
           label: "About Camera Recorder",
           click: () => {
-            import_electron8.dialog.showMessageBox(mainWindow, {
+            import_electron9.dialog.showMessageBox(mainWindow, {
               type: "info",
               title: "About Camera Recorder",
               message: "Ubuntu Camera & Audio Recorder",
-              detail: `Version: ${import_electron8.app.getVersion() || "1.0.0"}
+              detail: `Version: ${import_electron9.app.getVersion() || "1.0.0"}
 Target: Ubuntu Linux / Desktop
 Architecture: ${process.arch}
 Electron & React Desktop Application`,
@@ -655,14 +694,14 @@ Electron & React Desktop Application`,
         {
           label: "Ubuntu Documentation & Help",
           click: async () => {
-            await import_electron8.shell.openExternal("https://ubuntu.com");
+            await import_electron9.shell.openExternal("https://ubuntu.com");
           }
         }
       ]
     }
   ];
-  const menu = import_electron8.Menu.buildFromTemplate(template);
-  import_electron8.Menu.setApplicationMenu(menu);
+  const menu = import_electron9.Menu.buildFromTemplate(template);
+  import_electron9.Menu.setApplicationMenu(menu);
 }
 async function createWindow() {
   logger.info("Electron", "Creating BrowserWindow");
@@ -675,8 +714,8 @@ async function createWindow() {
     import_path3.default.join(process.cwd(), "public", "icon.png")
   ];
   const resolvedIconPath = iconCandidates.find((p) => import_fs3.default.existsSync(p));
-  const appIcon = resolvedIconPath ? import_electron8.nativeImage.createFromPath(resolvedIconPath) : void 0;
-  const win = new import_electron8.BrowserWindow({
+  const appIcon = resolvedIconPath ? import_electron9.nativeImage.createFromPath(resolvedIconPath) : void 0;
+  const win = new import_electron9.BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 1100,
@@ -697,6 +736,11 @@ async function createWindow() {
   win.once("ready-to-show", () => {
     win.show();
     logger.info("Electron", "Main window created and displayed");
+  });
+  win.on("closed", () => {
+    logger.info("Electron", "Main window closed event received.");
+    mainWindow = null;
+    import_electron9.app.quit();
   });
   win.webContents.on("render-process-gone", (_event, details) => {
     logger.error("Electron", `Renderer process crashed: ${details.reason} (exitCode: ${details.exitCode})`);
@@ -727,38 +771,60 @@ async function createWindow() {
   }
   return win;
 }
-var gotTheLock = import_electron8.app.requestSingleInstanceLock();
+var gotTheLock = import_electron9.app.requestSingleInstanceLock();
 if (!gotTheLock) {
   logger.warn("Electron", "Another instance is already running. Quitting.");
-  import_electron8.app.quit();
+  import_electron9.app.quit();
 } else {
-  import_electron8.app.on("second-instance", () => {
+  import_electron9.app.on("second-instance", () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
   });
-  import_electron8.app.whenReady().then(async () => {
+  import_electron9.app.whenReady().then(async () => {
     logger.info("Electron", `Application starting on ${process.platform} (${process.arch})`);
     registerFilesystemIpc();
     registerRecordingIpc();
     registerSystemIpc();
     registerDevicesIpc();
+    registerWindowIpc();
     createApplicationMenu();
     mainWindow = await createWindow();
-    import_electron8.app.on("activate", async () => {
-      if (import_electron8.BrowserWindow.getAllWindows().length === 0) {
+    import_electron9.app.on("activate", async () => {
+      if (import_electron9.BrowserWindow.getAllWindows().length === 0) {
         mainWindow = await createWindow();
       }
     });
   });
-  import_electron8.app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") {
-      logger.info("Electron", "All windows closed. Exiting application.");
-      import_electron8.app.quit();
+  import_electron9.app.on("window-all-closed", () => {
+    logger.info("Electron", "All windows closed. Quitting application process.");
+    import_electron9.app.quit();
+  });
+  import_electron9.app.on("before-quit", () => {
+    logger.info("Electron", "Application before-quit. Cleaning up active sessions.");
+    try {
+      recordingService.stopRecording();
+    } catch {
     }
   });
+  import_electron9.app.on("will-quit", () => {
+    logger.info("Electron", "Application will-quit. Exiting process.");
+    setTimeout(() => {
+      process.exit(0);
+    }, 50).unref();
+  });
 }
+process.on("SIGINT", () => {
+  logger.info("Electron", "Process received SIGINT. Exiting cleanly.");
+  import_electron9.app.quit();
+  process.exit(0);
+});
+process.on("SIGTERM", () => {
+  logger.info("Electron", "Process received SIGTERM. Exiting cleanly.");
+  import_electron9.app.quit();
+  process.exit(0);
+});
 process.on("uncaughtException", (error) => {
   logger.error("Electron", `Uncaught Exception in Main: ${error.stack || error}`);
 });
