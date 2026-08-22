@@ -1,5 +1,6 @@
-import { app, BrowserWindow, Menu, MenuItemConstructorOptions, shell, dialog } from 'electron';
+import { app, BrowserWindow, Menu, MenuItemConstructorOptions, shell, dialog, nativeImage } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { logger } from './utils/logger';
 import { PathManager } from './utils/paths';
@@ -136,6 +137,17 @@ async function createWindow(): Promise<BrowserWindow> {
     ? path.join(currentDir, 'preload.js')
     : path.join(currentDir, 'preload.js');
 
+  // Resolve application icon from assets
+  const appRoot = isDev ? process.cwd() : path.join(currentDir, '..');
+  const iconCandidates = [
+    path.join(appRoot, 'assets', 'Icon.png'),
+    path.join(appRoot, 'assets', 'icon.png'),
+    path.join(process.cwd(), 'assets', 'Icon.png'),
+    path.join(process.cwd(), 'public', 'icon.png'),
+  ];
+  const resolvedIconPath = iconCandidates.find((p) => fs.existsSync(p));
+  const appIcon = resolvedIconPath ? nativeImage.createFromPath(resolvedIconPath) : undefined;
+
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -143,6 +155,7 @@ async function createWindow(): Promise<BrowserWindow> {
     minHeight: 700,
     backgroundColor: '#0c0f14',
     title: 'Ubuntu Camera & Audio Recorder',
+    icon: appIcon,
     show: false, // Show once ready-to-show to prevent white flash
     webPreferences: {
       preload: preloadPath,

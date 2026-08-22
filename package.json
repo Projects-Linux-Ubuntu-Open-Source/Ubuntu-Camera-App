@@ -26,9 +26,12 @@
     },
     "files": [
       "dist/**/*",
-      "dist-electron/**/*"
+      "dist-electron/**/*",
+      "assets/**/*"
     ],
+    "icon": "assets/Icon.png",
     "linux": {
+      "icon": "assets/Icon.png",
       "target": [
         "AppImage",
         "deb"

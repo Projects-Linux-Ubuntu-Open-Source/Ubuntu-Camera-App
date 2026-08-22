@@ -144,7 +144,9 @@ To protect user privacy and system security, the Electron architecture adheres t
 ### Directory Tree
 
 ```text
-camera-recorder/
+├── assets/                           # 🎨 Application Assets & Icons
+│   └── Icon.png                      # High-resolution desktop application icon
+│
 ├── electron/                         # 🖥️ Native Electron Main Process
 │   ├── main.ts                       # Main process entry & window manager
 │   ├── preload.ts                    # ContextBridge security barrier & API exposure

@@ -21,8 +21,16 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ children }) => {
       <header className="h-9 bg-[#161a20] border-b border-[#222832] flex items-center justify-between px-3 select-none shrink-0 z-30">
         {/* Left: Window title & Activity indicator */}
         <div className="flex items-center gap-2.5">
-          <div className="w-3.5 h-3.5 rounded-sm bg-[#e95420] flex items-center justify-center text-white">
-            <Video className="w-2.5 h-2.5" />
+          <div className="w-4 h-4 rounded-sm overflow-hidden bg-[#e95420] flex items-center justify-center text-white shrink-0">
+            <img
+              src="/icon.png"
+              alt="Icon"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
           </div>
           <span className="text-xs font-semibold text-neutral-300 tracking-wide">
             Ubuntu Camera & Audio Recorder
