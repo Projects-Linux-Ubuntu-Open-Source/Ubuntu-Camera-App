@@ -591,10 +591,13 @@ var import_meta = {};
 var isDev = process.env.NODE_ENV !== "production" || !import_electron9.app.isPackaged;
 var mainWindow = null;
 var getDirname = () => {
+  if (typeof __dirname !== "undefined") {
+    return __dirname;
+  }
   try {
     return import_path3.default.dirname((0, import_url.fileURLToPath)(import_meta.url));
   } catch {
-    return __dirname;
+    return process.cwd();
   }
 };
 var currentDir = getDirname();
@@ -705,7 +708,13 @@ Electron & React Desktop Application`,
 }
 async function createWindow() {
   logger.info("Electron", "Creating BrowserWindow");
-  const preloadPath = isDev ? import_path3.default.join(currentDir, "preload.js") : import_path3.default.join(currentDir, "preload.js");
+  const preloadCandidates = [
+    import_path3.default.join(currentDir, "preload.cjs"),
+    import_path3.default.join(currentDir, "preload.js"),
+    import_path3.default.join(process.cwd(), "dist-electron", "preload.cjs"),
+    import_path3.default.join(process.cwd(), "dist-electron", "preload.js")
+  ];
+  const preloadPath = preloadCandidates.find((p) => import_fs3.default.existsSync(p)) || import_path3.default.join(currentDir, "preload.cjs");
   const appRoot = isDev ? process.cwd() : import_path3.default.join(currentDir, "..");
   const iconCandidates = [
     import_path3.default.join(appRoot, "assets", "Icon.png"),

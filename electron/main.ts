@@ -15,12 +15,15 @@ import { recordingService } from './services/recordingService';
 const isDev = process.env.NODE_ENV !== 'production' || !app.isPackaged;
 let mainWindow: BrowserWindow | null = null;
 
-// Determine directory paths safely for both ESM and CJS
+// Determine directory paths safely for CommonJS (.cjs) and ESM
 const getDirname = () => {
+  if (typeof __dirname !== 'undefined') {
+    return __dirname;
+  }
   try {
     return path.dirname(fileURLToPath(import.meta.url));
   } catch {
-    return __dirname;
+    return process.cwd();
   }
 };
 
@@ -134,10 +137,14 @@ function createApplicationMenu(): void {
 async function createWindow(): Promise<BrowserWindow> {
   logger.info('Electron', 'Creating BrowserWindow');
 
-  // Preload path resolution
-  const preloadPath = isDev
-    ? path.join(currentDir, 'preload.js')
-    : path.join(currentDir, 'preload.js');
+  // Preload path resolution supporting both .cjs and .js
+  const preloadCandidates = [
+    path.join(currentDir, 'preload.cjs'),
+    path.join(currentDir, 'preload.js'),
+    path.join(process.cwd(), 'dist-electron', 'preload.cjs'),
+    path.join(process.cwd(), 'dist-electron', 'preload.js'),
+  ];
+  const preloadPath = preloadCandidates.find((p) => fs.existsSync(p)) || path.join(currentDir, 'preload.cjs');
 
   // Resolve application icon from assets
   const appRoot = isDev ? process.cwd() : path.join(currentDir, '..');
